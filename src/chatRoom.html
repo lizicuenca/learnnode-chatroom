@@ -1,0 +1,328 @@
+<html>
+
+</head>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+
+<style>
+
+  #messages {
+    float: left;
+    width: 600px;
+    height: 600px;
+	overflow-y: scroll;  
+	border: 1px solid #a1a1a1;
+    padding: 10px;
+    background: #f1f1f1;
+    xborder-radius: 10px;	
+  }
+  .messageTxtContainer {
+  
+	width:	621px; 
+  }
+  ul{
+	padding:0px;
+  }
+  
+  #typing {
+	text-align: left;
+    color: blue;
+    list-style-type: none;
+    display: inline-block;
+	font-family: cursive, "Times New Roman", Georgia;
+    max-width: 301px;	
+  }
+  .message {
+	text-align: left;
+    color: #000000;
+    background-color: #d3d3d3;
+    margin: 2px;
+    list-style-type: none;
+    padding: 10px;
+    display: inline-block;
+    float: left;
+    clear: both;
+    border-radius: 15px;
+    max-width: 301px;	
+  }
+.time {
+	font-size: 8px;
+    color: gray;
+	}
+.me {
+	text-align: right;
+    color: #FFFFFF;
+    float: right;
+    background-color: #4CAF50;
+}
+.me .time{
+	color: #fff;
+}
+
+</style>
+
+
+<script type="text/javascript">
+    (function() {
+
+
+        function message(params){
+            userId =  params.userId;
+            //outbound= params.newMessage;
+            //messageBody = null;
+        }
+
+
+        message.prototype = {
+            transmit: function(messageText){
+                // send new message to server
+                console.log("in transmit", messageText);
+                $.ajax({
+                    type: "GET",
+                    url: "/write.html",
+                    jsonp:"callback",
+                    dataType: 'json',
+                    data: {
+                        // values for geo suggest data test
+                            id:getParamFromURL('id'),
+                            query:messageText
+
+
+                        //values for chat message, uncomment and point the above URL to your 1007 server
+                        //userId:message.userId,
+                        //messageBody:messageText
+                    },
+                    success:message.receive,
+					error:message.error
+                });
+            },
+			error: function(error){
+				console.log("error")
+				console.log(error);;
+			},
+            receive: function(data){
+				//console.log("receive");
+				//console.log(data);
+				var urId = getParamFromURL('id')+',';
+				//console.log(urId)
+				
+				
+				$('#messageList').html("");
+		
+				if (data.messages.length>0){
+					data.messages.forEach(function(messageItem){
+						var messageItemA = messageItem.split(",")
+						console.log(messageItemA)
+						var className="message";
+						
+						if(messageItem != ''){
+							//get datetime
+							
+							var recordDate = new Date(parseInt(messageItemA[0]));
+							
+							var diff = timeDifference(new Date(),recordDate);
+							
+							if (messageItem.indexOf(urId) > -1){
+						// console.log(messageItem.indexOf(urId) + "index")
+								messageItem = messageItem.replace(urId," - Me : ");
+								className +=" me";
+								$('#messageList').prepend($('<li class=\"'+ className+'"'+'></li>').html(unescape(messageItemA[2]) + '<div class="time"> '+diff+'<div>'));
+							//	console.log("messageItem"+messageItem);
+							}else{
+								$('#messageList').prepend($('<li class=\"'+ className+'"'+'></li>').html(unescape(messageItemA[1]+" : "+messageItemA[2]) + '<div class="time"> '+diff+'<div>'));
+							}
+							}
+					})
+				}
+				
+				             
+            },
+
+            poll: function(){
+			console.log('jdjdj');
+				$.ajax({
+                    type: "GET",
+                    url: "/read.html",
+                    jsonp:"callback",
+                    dataType: 'json',
+                    success:message.receive,
+					error:message.error
+                });
+                //poll server for latest messages
+                // call message.receive to post message on the stack
+            },
+			send: function(){
+                var messageText= $("#messageTxt").val();
+                message.transmit(messageText);
+				$("#messageTxt").val("");
+            },
+			typingPoll: function(){
+			//console.log('jdjdj');
+				$.ajax({
+                    type: "GET",
+                    url: "/typing.html",
+                    jsonp:"callback",
+                    dataType: 'json',
+                    success:message.typing,
+					error:message.error
+                });
+                //poll server for latest messages
+                // call message.receive to post message on the stack
+            },
+			typing: function(data){
+				$('#typing').html("");
+				if(data.user != ''){
+				$('#typing').html(data.user+" is typing ...");
+				}
+			}
+
+        };
+
+        function init(){
+            console.log("in init");
+			message.poll();
+            $(document.getElementById("sendButton")).on("click",message.send);
+			$("#messageTxt").keyup(function(event){
+				if(event.keyCode == 13){
+					$("#sendButton").click();
+				}
+			});
+			$("#messageTxt").on("keyup",function(event){
+				var isTyping=true;
+				if ($("#messageTxt").val()==''){
+					isTyping = false;
+				}
+				$.ajax({
+                    type: "GET",
+                    url: "/typingUpdate.html",
+                    jsonp:"callback",
+                    dataType: 'json',
+                    data: {
+                        // values for geo suggest data test
+                            typing:isTyping,
+                            id:getParamFromURL('id')
+                        //values for chat message, uncomment and point the above URL to your 1007 server
+                        //userId:message.userId,
+                        //messageBody:messageText
+                    },
+                    success:message.typingUpdate,
+					error:message.error
+					
+                });				
+			
+			});
+			setInterval(message.poll,2000);
+			setInterval(message.typingPoll,3000);
+			
+        }
+
+
+        var message = new message({userId:"db"});
+        $(document).ready(init);
+
+    }());
+
+	function getParamFromURL( paramId) {
+var result = false;
+     var searchString = window.location.search.substring(1);
+	 
+    var paramList = searchString.split("&");
+console.log(paramList)
+    paramList.forEach(function(param) {
+        var keyValuePair = param.split("=");
+        var key = keyValuePair[0];
+        var value = keyValuePair[1];
+      //  console.log(key,paramId)
+
+        if (key == paramId) {
+            result= value;
+        }
+    });
+    
+    return result;
+} 
+/*
+$(window).on("blur focus", function(e) {
+	
+    var prevType = $(this).data("prevType");
+	var interval_message, interval_typingpoll;
+
+    if (prevType != e.type) {   //  reduce double fire issues
+        switch (e.type) {
+            case "blur":
+               if (interval_message!=null ){
+					clearInterval(interval_message);
+					clearInterval(interval_typingpoll)
+				}
+                break;
+            case "focus":
+				interval_message = setInterval(message.poll,2000);
+				interval_typingpoll = setInterval(message.typingPoll,3000);
+
+                break;
+        }
+    }
+
+    $(this).data("prevType", e.type);
+})
+*/
+
+function timeDifference(current, previous) {
+	//console.log("diff" + current + ":"+previous)
+
+    var msPerMinute = 60 * 1000;
+    var msPerHour = msPerMinute * 60;
+    var msPerDay = msPerHour * 24;
+    var msPerMonth = msPerDay * 30;
+    var msPerYear = msPerDay * 365;
+
+    var elapsed = current - previous;
+
+    if (elapsed < msPerMinute) {
+         return Math.round(elapsed/1000) + ' seconds ago';   
+    }
+
+    else if (elapsed < msPerHour) {
+         return Math.round(elapsed/msPerMinute) + ' minutes ago';   
+    }
+
+    else if (elapsed < msPerDay ) {
+         return Math.round(elapsed/msPerHour ) + ' hours ago';   
+    }
+
+    else if (elapsed < msPerMonth) {
+        return 'approximately ' + Math.round(elapsed/msPerDay) + ' days ago';   
+    }
+
+    else if (elapsed < msPerYear) {
+        return 'approximately ' + Math.round(elapsed/msPerMonth) + ' months ago';   
+    }
+
+    else {
+        return 'approximately ' + Math.round(elapsed/msPerYear ) + ' years ago';   
+    }
+	
+}
+
+</script>
+</head>
+<body>
+
+<div class="messageTxtContainer">
+    <input type="text" id="messageTxt" style="padding:5px; width:80%; "><button id="sendButton" style="padding:5px; width:20%">send</button>
+</div>
+
+
+<div id="messages">
+	
+    <ul >
+		<li id="typing">A peaceful day.</li>
+		<div id="messageList">
+			<li>Loading...</li>
+		 </div>
+    </ul>
+</div>
+
+
+</body>
+
+</html>
