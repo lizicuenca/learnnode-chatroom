@@ -1,6 +1,13 @@
 # learnnode-chatroom
 A small project,chat room,  server as POC for learning node. 
 
+Setup to run your chat app: 
+ 1. in command prompt, go to your code path
+ 2. cd src
+ 3. node chatroom-message.js # this step will start the chat server locally in port 1007. 
+ 4. In your browser, you could use: http://localhost:1007/index.html?id=SOME_ID_YOU_LIKE
+
+
 # webpack-template
 Template project for webpack, karma, jasmine
 
