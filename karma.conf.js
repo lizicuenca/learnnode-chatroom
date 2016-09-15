@@ -10,7 +10,7 @@ const karmaConfig = {
     preprocessors: {
       './test/tests.webpack.js': ['webpack'],
     },
-    reporters: ['dots'],
+    reporters: ['dots','progress'],
     singleRun: true,
     webpack: {
         resolve: {
